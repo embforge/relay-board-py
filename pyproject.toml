@@ -1,0 +1,23 @@
+[project]
+name = "relay_board_py"
+version = "0.1"
+description = "Python package to interact with relay board"
+license = "MIT"
+authors = [ { name="Michael Hopfengaertner", email="michael.hopfengaertner@gmx.net" }, ]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    'pyserial >= 3.4',
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/MichaelHopfengaertner/relay-board-py"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
