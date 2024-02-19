@@ -7,8 +7,10 @@ This is the actual documentation of the package and the relay board.
     * [Characteristics](#characteristics)
 2. [Package installation](#package-installation)
 3. [Package usage](#package-usage)
-    * [Arguments](#arguments)
-    * [Pattern-files](#pattern-files)
+    * [Execute package as module](#execute-package-as-module)
+        * [Arguments](#arguments)
+        * [Pattern files](#pattern-files)
+    * [Integrate package in own module](#integrate-package-in-own-module)
 4. [Use-cases](#use-cases)
     * [Switch programmer](#switch-programmer)
     * [Switch target](#switch-target)
@@ -17,13 +19,14 @@ This is the actual documentation of the package and the relay board.
         * [Adapter J-Link](#adapter-j-link)
         * [Adapter ST-Link](#adapter-st-link)
         * [Adapter Generic](#adapter-generic)
+    * [Cascaded relay boards](#cascaded-relay-boards)
 
 <a id="introduction"></a>
 ## Introduction
 
-<img src="img/RB_1_10_00.jpg" width="700"/>
+<img src="img/RB_1_10_00.jpg" width="800"/>
 
-<img src="img/RB_1_10_00_connected.jpg" width="700"/>
+<img src="img/RB_1_10_00_connected.jpg" width="800"/>
 
 - **Generic** pin switcher for development, production, testing, measurements etc.
 - **Galvanic isolation** between multiple devices
@@ -68,30 +71,25 @@ python3 -m pip install relay_board_py
 <a id="package-usage"></a>
 ## Package usage
 
-1. Execute package directly as module:
+<a id="execute-package-as-module"></a>
+### Execute package as module
+
 ```bash
 python3 -m relay_board_py -s RB90FJ7SIHYU1F -c 1,7 -o 2 -r
 ```
 
-2. Integrate into own python module:
-```python
-from relay_board_py.relay_board import RelayBoard
-
-RelayBoard.main(['-s', 'RB90FJ7SIHYU1F', '-c', '1,7', '-o', '2', '-r'])
-```
-
 <a id="arguments"></a>
-### Arguments
+#### Arguments
 
 ```bash
-    -h, --help          show this help message and exit
-    -s SERIAL_NUMBER    Serial-number in single operation mode
-    -o OPEN             Specify relay ids to be opened "-o 1,2,3"
-    -c CLOSE            Specify relay ids to be closed "-c 1,2,3"
-    -f FILE             File path to json file containing the patterns
-    -p PATTERN          Pattern to be used in provided json file
-    -r                  Reset relay-board(s) first, before executing the operations
-    -i                  Print info about relay-board(s)
+-h, --help          show this help message and exit
+-s SERIAL_NUMBER    Serial-number in single operation mode
+-o OPEN             Specify relay ids to be opened "-o 1,2,3"
+-c CLOSE            Specify relay ids to be closed "-c 1,2,3"
+-f FILE             File path to json file containing the patterns
+-p PATTERN          Pattern to be used in provided json file
+-r                  Reset relay-board(s) first, before executing the operations
+-i                  Print info about relay-board(s)
 ```
 
 Relay boards can be controlled:
@@ -99,7 +97,7 @@ Relay boards can be controlled:
 - by json pattern file (arguments: -f, -p)
 
 <a id="pattern-files"></a>
-### Pattern files
+#### Pattern files
 
 For more complex relay board control, json "pattern" files can be defined:
 ```json
@@ -141,6 +139,28 @@ Finally, the state (close, open) for each alias must be defined as a list of rel
 The pattern file can be executed:
 ```bash
 python -m relay_board_py -f example_pattern.json -p P2 -r
+```
+
+<a id="integrate-package-in-own-module"></a>
+### Integrate package in own module
+
+1. By calling `staticmethod` `main` of `RelayBoard` class with command line arguments:
+```python
+from relay_board_py.relay_board import RelayBoard
+
+RelayBoard.main(['-s', 'RB90FJ7SIHYU1F', '-c', '1,7', '-o', '2', '-r'])
+```
+
+2. By creating `RelayBoard` object:
+```python
+from relay_board_py.relay_board import RelayBoard
+
+relay_board = RelayBoard("RB90FJ7SIHYU1F")
+relay_board.open()
+relay_board.print_info()  # optional
+relay_board.reset()  # optional
+relay_board.write_relay_state({"close": [1, 7], "open": [2]})
+relay_board.close()
 ```
 
 <a id="use-cases"></a>
@@ -211,3 +231,10 @@ This is a generic 10 pins adapter. Can be used for custom adapters (e.g. just us
 
 <img src="img/Adapter_Generic_A.jpg" height="150"/> <img src="img/Adapter_Generic_B.jpg" height="150"/>
 <img src="img/Adapter_Generic_C.jpg" height="150"/>
+
+<a id="cascaded-relay-boards"></a>
+### Cascaded relay boards
+
+Relay boards can also be cascaded:
+
+<img src="img/RB_1_10_00_cascaded.jpg" width="800"/>
