@@ -51,9 +51,3 @@ class RelayBoardHardware():
         self.serial_device.set_dtr(True)
         self.serial_device.set_rts(True)
         time.sleep(0.02)
-
-
-if __name__ == "__main__":
-    rb = RelayBoardHardware("00", "D30GR9J1")
-    rb.open()
-    rb.close()

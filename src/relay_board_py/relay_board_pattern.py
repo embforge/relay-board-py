@@ -6,7 +6,7 @@ if __package__ is None or __package__ == "":
 else:
     from .serial_number import SerialNumber
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 
 class RelayBoardPattern():
@@ -30,35 +30,25 @@ class RelayBoardPattern():
             serial_numbers.append(self.aliases[alias])
         return serial_numbers
 
-    def get_pattern(self, serial_number: str, pattern: Optional[str] = None) \
-            -> Dict[str, List[int]]:
-        """Return the pattern for a serial-number."""
-        alias = self.get_alias_by_serial_number(serial_number)
-        return self.get_pattern_by_alias(alias, pattern)
+    def get_serial_number(self, alias: str) -> str:
+        """Return the serial-number of an alias."""
+        if (alias not in self.aliases):
+            raise RelayBoardPatternException(f"Couldn't find alias {alias}")
+        return self.aliases[alias]
 
-    def get_pattern_by_alias(self, alias: str, pattern: Optional[str] = None) \
-            -> Dict[str, List[int]]:
-        """Return the pattern of an alias."""
+    def get_pattern(self, pattern_str: Optional[str] = None) \
+            -> Dict[str, Dict[str, Union[str, List[int]]]]:
+        """Return the pattern."""
         # if None and only one pattern defined, this pattern is automatically used
-        if (pattern is None):
+        if (pattern_str is None):
             keys = list(self.patterns.keys())
             if (len(keys) != 1):
                 raise RelayBoardPatternException(f"Pattern undetermined. Use one of {keys}")
-            pattern = keys[0]
+            pattern_str = keys[0]
         # assert that pattern is available
-        if (pattern not in self.patterns):
-            raise RelayBoardPatternException(f"Couldn't find pattern {pattern}")
-        # search for the pattern and alias
-        if alias in self.patterns[pattern]:
-            return self.patterns[pattern][alias]
-        return {}
-
-    def get_alias_by_serial_number(self, serial_number: str) -> str:
-        """Return the alias of a serial-number."""
-        for alias in self.aliases:
-            if (serial_number == self.aliases[alias]):
-                return alias
-        raise RelayBoardPatternException(f"Serial number {serial_number} has no alias")
+        if (pattern_str not in self.patterns):
+            raise RelayBoardPatternException(f"Couldn't find pattern_str {pattern_str}")
+        return self.patterns[pattern_str]
 
     @staticmethod
     def assert_aliases_format(aliases: Dict[str, str]) -> None:
@@ -93,10 +83,16 @@ class RelayBoardPattern():
                     if state not in available_states:
                         raise RelayBoardPatternException(f"Unknown state \"{state}\". " +
                                                          f"Must be one of {available_states}")
-                    pins = states[state]
-                    for pin in pins:
-                        if type(pin) is not int:
-                            raise RelayBoardPatternException(f"Invalid pin type {type(pin)}")
+                    entry = states[state]
+                    if type(entry) is list:
+                        for pin in entry:
+                            if type(pin) is not int:
+                                raise RelayBoardPatternException(f"Invalid pin type {type(pin)}")
+                    elif type(entry) is str:
+                        if (entry != "all"):
+                            raise RelayBoardPatternException("Must be \"all\" string")
+                    else:
+                        raise RelayBoardPatternException(f"Invalid type {type(entry)}")
 
     @staticmethod
     def from_file(file: str) -> RelayBoardPattern:
@@ -112,8 +108,8 @@ class RelayBoardPattern():
 
     @staticmethod
     def from_serial_number(serial_number: str,
-                           open: Optional[List[int]] = None,
-                           close: Optional[List[int]] = None) -> RelayBoardPattern:
+                           open: Optional[Union[str, List[int]]] = None,
+                           close: Optional[Union[str, List[int]]] = None) -> RelayBoardPattern:
         """Create RelayBoardPattern from serial-number."""
         state = {}
         if (open is not None):
@@ -130,9 +126,3 @@ class RelayBoardPatternException(Exception):
     """RelayBoardPattern exception class."""
 
     pass
-
-
-if __name__ == "__main__":
-    pattern = RelayBoardPattern.from_file("../examples/example_pattern_multiple.json")
-    print(pattern)
-    print(pattern.get_pattern(pattern.get_serial_numbers()[0], "P1"))

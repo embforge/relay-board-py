@@ -1,17 +1,17 @@
 # Documentation of relay board py
-This is the actual documentation of the package and the relay board.
 
 1. [Introduction](#introduction)
-2. [Specification](#specification)
+2. [Features](#features)
+3. [Specification](#specification)
     * [Naming](#naming)
     * [Characteristics](#characteristics)
-2. [Package installation](#package-installation)
-3. [Package usage](#package-usage)
+4. [Package installation](#package-installation)
+5. [Package usage](#package-usage)
     * [Execute package as module](#execute-package-as-module)
         * [Arguments](#arguments)
         * [Pattern files](#pattern-files)
     * [Integrate package in own module](#integrate-package-in-own-module)
-4. [Use-cases](#use-cases)
+6. [Use-cases](#use-cases)
     * [Switch programmer](#switch-programmer)
     * [Switch target](#switch-target)
     * [Adapters](#adapters)
@@ -24,17 +24,25 @@ This is the actual documentation of the package and the relay board.
 <a id="introduction"></a>
 ## Introduction
 
-<img src="img/RB_1_10_00.jpg" width="800"/>
+This documentation gives an overview of the components,
+functionality and usage of relay board **RB-1-10**.
 
-<img src="img/RB_1_10_00_connected.jpg" width="800"/>
+<img src="img/RB_1_10_01.jpg" width="800"/>
+
+<img src="img/RB_1_10_01_connected.jpg" width="800"/>
+
+<a id="features"></a>
+## Features
 
 - **Generic** pin switcher for development, production, testing, measurements etc.
 - **Galvanic isolation** between multiple devices
 - **Individual** control of all relay states
 - **Cascading** of relay boards possible (to connect more devices)
 - Python package to control relay board(s) from a host PC
-- Unique serial number to identify each relay board
+- Unique **serial number** to identify each relay board
 - LEDs indicating the current relay state of each relay
+- User button toggles all relay states by default
+- Reset button reboots the microcontroller
 
 <a id="specification"></a>
 ## Specification
@@ -54,11 +62,14 @@ This is the actual documentation of the package and the relay board.
 
 Characteristiscs of **RB-1-10**:
 
-| Property                                         | Value |
-| :----------------------------------------------- | :---- |
-| Number of individually switchable pins COM/NO/NC | 10    |
-| Maximum voltage per pin                          | 60 V  |
-| Maximum current per pin                          | 2 A   |
+| Property                                         | Value  |
+| :----------------------------------------------- | :----- |
+| Number of individually switchable pins COM/NO/NC | 10     |
+| Maximum voltage per pin                          | 60 V   |
+| Maximum current per pin                          | 2 A    |
+| Relay board supply voltage (USB)                 | 5 V    |
+| Relay board supply current (all relays opened)   | 20 mA  |
+| Relay board supply current (all relays closed)   | 350 mA |
 
 <a id="package-installation"></a>
 ## Package installation
@@ -68,6 +79,11 @@ Install the `relay_board_py` package via `pip`:
 python3 -m pip install relay_board_py
 ```
 
+Alternatively, the package can also be installed within a `pipenv` virtual environment:
+```bash
+pipenv install relay_board_py
+```
+
 <a id="package-usage"></a>
 ## Package usage
 
@@ -75,7 +91,10 @@ python3 -m pip install relay_board_py
 ### Execute package as module
 
 ```bash
-python3 -m relay_board_py -s RB90FJ7SIHYU1F -c 1,7 -o 2 -r
+# with python:
+python3 -m relay_board_py -s RB00D30GR9J5 -c 1,7 -o 2 -r
+# within pipenv virtual environment:
+pipenv run python3 -m relay_board_py -s RB00D30GR9J5 -c 1,7 -o 2 -r
 ```
 
 <a id="arguments"></a>
@@ -84,8 +103,8 @@ python3 -m relay_board_py -s RB90FJ7SIHYU1F -c 1,7 -o 2 -r
 ```bash
 -h, --help          show this help message and exit
 -s SERIAL_NUMBER    Serial-number in single operation mode
--o OPEN             Specify relay ids to be opened "-o 1,2,3"
--c CLOSE            Specify relay ids to be closed "-c 1,2,3"
+-o OPEN             Relay ids to be opened "-o 1,2,3" or "-o all"
+-c CLOSE            Relay ids to be closed "-c 1,2,3" or "-c all"
 -f FILE             File path to json file containing the patterns
 -p PATTERN          Pattern to be used in provided json file
 -r                  Reset relay-board(s) first, before executing the operations
@@ -103,8 +122,8 @@ For more complex relay board control, json "pattern" files can be defined:
 ```json
 {
     "aliases": {
-        "A1": "RB90FJ7SIHYU1F",
-        "A2": "RB9ZIRP7TWC305"
+        "A1": "RB00D30GR9J2",
+        "A2": "RB00D30GR9J5"
     },
     "patterns": {
         "P1": {
@@ -119,8 +138,7 @@ For more complex relay board control, json "pattern" files can be defined:
         },
         "P2": {
             "A1": {
-                "open": [10],
-                "close": [1, 2]
+                "close": "all"
             }
         }
     }
@@ -134,7 +152,9 @@ The alias can be **any** string.
 **patterns**:
 Creates one or multiple patterns. The pattern name can be **any** string.
 Inside a pattern, all relay board aliases to be used for **this** pattern must be added.
-Finally, the state (close, open) for each alias must be defined as a list of relay ids (integer).
+Finally, the state (`close`, `open`) for each alias must be defined.
+It can be either a list of relay ids (integer) or `"all"` (string).
+The execution order of the aliases and states corresponds to the definition in the pattern.
 
 The pattern file can be executed:
 ```bash
@@ -148,18 +168,23 @@ python -m relay_board_py -f example_pattern.json -p P2 -r
 ```python
 from relay_board_py.relay_board import RelayBoard
 
-RelayBoard.main(['-s', 'RB90FJ7SIHYU1F', '-c', '1,7', '-o', '2', '-r'])
+RelayBoard.main(['-s', 'RB00D30GR9J5', '-c', '1,7', '-o', '2', '-r'])
 ```
 
 2. By creating `RelayBoard` object:
 ```python
 from relay_board_py.relay_board import RelayBoard
+import time
 
-relay_board = RelayBoard("RB90FJ7SIHYU1F")
+relay_board = RelayBoard("RB00D30GR9J5")
 relay_board.open()
 relay_board.print_info()  # optional
 relay_board.reset()  # optional
 relay_board.write_relay_state({"close": [1, 7], "open": [2]})
+time.sleep(1)
+relay_board.write_relay_state({"open": "all"})
+time.sleep(1)
+relay_board.write_relay_state({"close": "all"})
 relay_board.close()
 ```
 
@@ -209,6 +234,7 @@ This is a generic adapter between [TC2050-IDC-430](https://www.tag-connect.com/p
 (14 pins) to [TC2050-IDC](https://www.tag-connect.com/product/tc2050-idc-tag-connect-2050-idc) (10 pins).
 
 <img src="img/Adapter_TC2050_430_A.jpg" height="150"/> <img src="img/Adapter_TC2050_430_B.jpg" height="150"/>
+<img src="img/Adapter_TC2050_430_C.png" height="150"/>
 
 <a id="adapter-j-link"></a>
 #### Adapter J-Link

@@ -1,6 +1,6 @@
 [project]
 name = "relay_board_py"
-version = "0.1"
+version = "0.2"
 description = "Python package to interact with relay board"
 license = "MIT"
 authors = [ { name="Michael Hopfengaertner", email="michael.hopfengaertner@gmx.net" }, ]
@@ -17,6 +17,8 @@ classifiers = [
 
 [project.urls]
 Homepage = "https://github.com/MichaelHopfengaertner/relay-board-py"
+Documentation = "https://github.com/MichaelHopfengaertner/relay-board-py/tree/main/doc"
+Changelog = "https://github.com/MichaelHopfengaertner/relay-board-py/blob/main/CHANGELOG.md"
 
 [build-system]
 requires = ["hatchling"]

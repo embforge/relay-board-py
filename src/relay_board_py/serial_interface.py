@@ -129,27 +129,3 @@ class SerialInterfaceException(Exception):
     """Serial interface exception class."""
 
     pass
-
-
-if __name__ == "__main__":
-    import time
-
-    d = Device.by_serial_number("D30GR9J1")
-    print(d)
-
-    d.open()
-    time.sleep(1)
-    d.write("RB+SET=101-C\n\r".encode("utf-8"))
-    print(d.read_until(expected=b'\n\r', timeout=0.5).decode("utf-8", errors="ignore"))
-
-    time.sleep(2)
-    # Perform a reset
-    d.set_dtr(True)
-    d.set_rts(False)
-    time.sleep(2)
-    # Default state
-    d.set_dtr(True)
-    d.set_rts(True)
-    time.sleep(1)
-
-    d.close()

@@ -10,7 +10,13 @@ else:
     from .relay_board_pattern import RelayBoardPattern
 import argparse
 import sys
-from typing import Dict, List, Optional
+import logging
+from typing import Dict, List, Optional, Union
+
+# create a module_logger and add sys.stdout handler
+module_logger = logging.getLogger("relay_board.py")
+module_logger.setLevel(logging.INFO)
+module_logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 class RelayBoard():
@@ -51,9 +57,9 @@ class RelayBoard():
 
     def print_info(self) -> None:
         """Print meta-data information of the relay-board."""
-        print(f"Serial-number:    {self.read_serial_number()}")
-        print(f"Hardware-version: {self.read_hardware_version()}")
-        print(f"Firmware-version: {self.read_firmware_version()}")
+        module_logger.info(f"Serial-number:    {self.read_serial_number()}")
+        module_logger.info(f"Hardware-version: {self.read_hardware_version()}")
+        module_logger.info(f"Firmware-version: {self.read_firmware_version()}")
 
     def request(self, request_header: str, request_payload: str = "", timeout: float = 0.5) -> str:
         """Send request to relay-board and receive response."""
@@ -61,15 +67,15 @@ class RelayBoard():
         request_str = RelayBoard.REQUEST_PREFIX + request_header
         if (len(request_payload) > 0):
             request_str += RelayBoard.PAYLOAD_SEPARATOR + request_payload
+        module_logger.debug("request:\n" + request_str)
         request_str += RelayBoard.MESSAGE_SEPARATOR
-        # print("request:\n" + request_str)
         # write request string and read response string
         self.hardware.write_str(request_str)
         response_str = self.hardware.read_until_str(
             expected=RelayBoard.MESSAGE_SEPARATOR, timeout=timeout)
         response_str = response_str.replace(RelayBoard.MESSAGE_SEPARATOR, "")
         # process the response string
-        # print("response:\n" + response_str)
+        module_logger.debug("response:\n" + response_str)
         if (not response_str.startswith(RelayBoard.RESPONSE_PREFIX + request_header)):
             raise RelayBoardException(f"Invalid response: \"{response_str}\"")
         # extract the payload (if available)
@@ -90,27 +96,32 @@ class RelayBoard():
         """Read firmware-version from relay-board."""
         return self.request("FW")
 
-    def write_relay_state(self, state: Dict[str, List[int]]) -> None:
+    def write_relay_state(self, state: Dict[str, Union[str, List[int]]]) -> None:
         """Write the relay state."""
         keys = {"open": "O", "close": "C"}
+        module_logger.debug(f"write relay state: {state}")
         # first check all keys in state
         for key in state:
             if key not in keys:
                 raise RelayBoardException(f"Unknown key \"{key}\"")
-        # create the set command
-        commands = []
+        # create the commands
+        set_cmd: List[str] = []
         for key in state:
-            for relay in state[key]:
-                commands.append(str(relay) + "-" + keys[key])
-        if (len(commands) == 0):
-            # nothing to do
-            return
-        # perform the request
-        self.request("SET", ",".join(commands))
-        # verify the correctness by reading the state back and compare it
-        read_state = self.read_relay_state()
-        for key in state:
-            RelayBoard.assert_subset(state[key], read_state[key])
+            entry = state[key]
+            if type(entry) is list:
+                for relay in entry:
+                    set_cmd.append(str(relay) + "-" + keys[key])
+            elif (type(entry) is str) and (entry == "all"):
+                # send a potential pending SET request
+                if (len(set_cmd) > 0):
+                    self.request("SET", ",".join(set_cmd))
+                    set_cmd = []
+                # send ALL request
+                self.request("ALL", keys[key])
+        # send SET request
+        if (len(set_cmd) > 0):
+            self.request("SET", ",".join(set_cmd))
+            set_cmd = []
 
     def read_relay_state(self) -> Dict[str, List[int]]:
         """Read the relay state."""
@@ -131,6 +142,15 @@ class RelayBoard():
                 raise RelayBoardException(f"Entry {entry} not present in {superset}")
 
     @staticmethod
+    def parse_state_arg(state: Optional[str] = None) -> Optional[Union[str, List[int]]]:
+        """Parse a state argument (open/close)."""
+        if state is None:
+            return None
+        if state == "all":
+            return state
+        return list(map(int, state.split(",")))
+
+    @staticmethod
     def main(args_list: List[str]):
         """Execute argument parsing and the requested operations."""
         parser = argparse.ArgumentParser(prog="relay_board.py",
@@ -139,8 +159,10 @@ class RelayBoard():
                                          "or by json pattern file (argumments: -f, -p)",
                                          epilog="")
         parser.add_argument('-s', '--serial-number', help="Serial-number in single operation mode")
-        parser.add_argument('-o', '--open', help="Specify relay ids to be opened \"-o 1,2,3\"")
-        parser.add_argument('-c', '--close', help="Specify relay ids to be closed \"-c 1,2,3\"")
+        parser.add_argument('-o', '--open',
+                            help="Relay ids to be opened \"-o 1,2,3\" or \"-o all\"")
+        parser.add_argument('-c', '--close',
+                            help="Relay ids to be closed \"-c 1,2,3\" or \"-c all\"")
         parser.add_argument('-f', '--file', help="File path to json file containing the patterns")
         parser.add_argument('-p', '--pattern', help="Pattern to be used in provided json file")
         parser.add_argument('-r', '--reset', action='store_true',
@@ -150,30 +172,30 @@ class RelayBoard():
         args = parser.parse_args(args_list)
 
         relay_board_pattern: Optional[RelayBoardPattern] = None
-        pattern: Optional[str] = None
+        pattern_str: Optional[str] = None
 
         if (args.serial_number is not None):
             # create a RelayBoardPattern object from the serial number
-            open = None if args.open is None else list(map(int, args.open.split(",")))
-            close = None if args.close is None else list(map(int, args.close.split(",")))
+            open = RelayBoard.parse_state_arg(args.open)
+            close = RelayBoard.parse_state_arg(args.close)
             relay_board_pattern = \
                 RelayBoardPattern.from_serial_number(args.serial_number, open, close)
-            pattern = None  # uses first pattern by default
+            pattern_str = None  # uses first pattern by default
         elif (args.file is not None):
             # create a RelayBoardPattern object from the provided file
             relay_board_pattern = RelayBoardPattern.from_file(args.file)
-            pattern = args.pattern
+            pattern_str = args.pattern
         else:
             parser.print_help()
             sys.exit(1)
 
-        serial_numbers = relay_board_pattern.get_serial_numbers()
-        # create relay board objects
-        relay_boards: List[RelayBoard] = []
-        for serial_number in serial_numbers:
-            relay_boards.append(RelayBoard(serial_number))
-        # perform the actual operations on the relay boards
-        for relay_board in relay_boards:
+        # get the actual pattern (dict) from the relay_board_pattern object
+        pattern = relay_board_pattern.get_pattern(pattern_str)
+        # iterate over all aliases in the pattern
+        for alias in pattern:
+            # create relay_board object by serial_number
+            serial_number = relay_board_pattern.get_serial_number(alias)
+            relay_board = RelayBoard(serial_number)
             # open the relay boards
             relay_board.open()
             # print info if required
@@ -183,8 +205,7 @@ class RelayBoard():
             if (args.reset):
                 relay_board.reset()
             # set the relay-board state
-            state = relay_board_pattern.get_pattern(relay_board.get_serial_number(), pattern)
-            print(state)
+            state = pattern[alias]
             relay_board.write_relay_state(state)
             # close the relay boards
             relay_board.close()
