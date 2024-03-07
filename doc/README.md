@@ -3,7 +3,7 @@
 1. [Introduction](#introduction)
 2. [Features](#features)
 3. [Specification](#specification)
-    * [Naming](#naming)
+    * [Definitions](#definitions)
     * [Characteristics](#characteristics)
 4. [Package installation](#package-installation)
 5. [Package usage](#package-usage)
@@ -14,12 +14,12 @@
 6. [Use-cases](#use-cases)
     * [Switch programmer](#switch-programmer)
     * [Switch target](#switch-target)
+    * [Cascaded relay boards](#cascaded-relay-boards)
     * [Adapters](#adapters)
+        * [Adapter Generic](#adapter-generic)
         * [Adapter TC2050-430](#adapter-tc2050-430)
         * [Adapter J-Link](#adapter-j-link)
         * [Adapter ST-Link](#adapter-st-link)
-        * [Adapter Generic](#adapter-generic)
-    * [Cascaded relay boards](#cascaded-relay-boards)
 
 <a id="introduction"></a>
 ## Introduction
@@ -27,35 +27,37 @@
 This documentation gives an overview of the components,
 functionality and usage of relay board **RB-1-10**.
 
-<img src="img/RB_1_10_01.jpg" width="800"/>
+<img src="img/RB_1_10_01_side.jpg" width="800"/>
 
-<img src="img/RB_1_10_01_connected.jpg" width="800"/>
+<img src="img/RB_1_10_01_labeled.jpg" width="800"/>
 
 <a id="features"></a>
 ## Features
 
-- **Generic** pin switcher for development, production, testing, measurements etc.
+- **Generic** pin switcher for development, testing, CI/CD, production, measurement etc.
 - **Galvanic isolation** between multiple devices
+(e.g. to physically disconnect a programmer after programming a target)
 - **Individual** control of all relay states
+- **LEDs** indicating the current relay state of each relay
 - **Cascading** of relay boards possible (to connect more devices)
+- Reset button reboots the microcontroller
+- User button toggles all relay states by default
 - Python package to control relay board(s) from a host PC
 - Unique **serial number** to identify each relay board
-- LEDs indicating the current relay state of each relay
-- User button toggles all relay states by default
-- Reset button reboots the microcontroller
 
 <a id="specification"></a>
 ## Specification
 
-<a id="naming"></a>
-### Naming
+<a id="definitions"></a>
+### Definitions
 
-| Name   |  Description                                                        |
-| :---   | :------------------------------------------------------------------ |
-| COM    | The common port of a relay                                          |
-| NC     | The normally connected port of a relay (connected if relay is open) |
-| NO     | The normally opened port of a relay (connected if relay is closed)  |
-| Target | The device to be programmed, analyzed, debugged, ...                |
+| Name          |  Description                                                               |
+| :------------ | :------------------------------------------------------------------------- |
+| Serial number | **RB** **XX** **YYYYYYYY** (**X**: board-config, **Y**: USB serial number) |
+| COM           | The common port of a relay                                                 |
+| NC            | The normally connected port of a relay (connected if relay is open)        |
+| NO            | The normally opened port of a relay (connected if relay is closed)         |
+| Target        | The device to be programmed, analyzed, debugged, ...                       |
 
 <a id="characteristics"></a>
 ### Characteristics
@@ -70,6 +72,10 @@ Characteristiscs of **RB-1-10**:
 | Relay board supply voltage (USB)                 | 5 V    |
 | Relay board supply current (all relays opened)   | 20 mA  |
 | Relay board supply current (all relays closed)   | 350 mA |
+
+Pinout of **RB-1-10**:
+
+<img src="img/RB_1_10_pinout.svg" width="400"/>
 
 <a id="package-installation"></a>
 ## Package installation
@@ -192,15 +198,17 @@ relay_board.close()
 ## Use-cases
 
 There are various use-cases for relay-board(s):
-- Disconnect a programmer after programming to not disturb the device
+- Disconnect a programmer after programming to **not disturb** the target
 (low-power states, power-consumption, etc.)
-- Switch a (potentially expensive) programmer between multiple devices to save costs
+- Switch a single (potentially expensive) programmer between multiple target to **save costs**
 - ...
 
 <a id="switch-programmer"></a>
 ### Switch programmer
 
 A single programmer (e.g. a J-Link) can be switched between multiple targets.
+
+<img src="img/RB_1_10_01_programmer.jpg" width="800"/>
 
 After power up, all relays are switched from **COM**-port to **NC**-port (NC = normally connected):
 <img src="img/RB_1_10_COM_programmer_NC.svg" width="800"/>
@@ -218,23 +226,42 @@ Additionally, **each** relay/pin can be switched **individually**:
 
 The pins of a target can be switched between multiple devices (programmer, power supply, etc.).
 
+<img src="img/RB_1_10_01_target.jpg" width="800"/>
+
 All connected pins of a target can be swtiched individually to fulfill different purposes:
 
 <img src="img/RB_1_10_COM_target_NO_NC.svg" width="800"/>
+
+<a id="cascaded-relay-boards"></a>
+### Cascaded relay boards
+
+Relay boards can also be cascaded:
+
+<img src="img/RB_1_10_00_cascaded.jpg" width="800"/>
 
 <a id="adapters"></a>
 ### Adapters
 
 Multiple adapters are available to enable comfortable connection to the relay board.
 
+<a id="adapter-generic"></a>
+#### Adapter Generic
+
+This is a generic 10 pins (1-10) adapter to create create custom adapters.
+The additional 20 pins (A-T) are not connected to the 10 pins (1-10), so they can be used
+for soldering different connectors/headers with a custom pinout.
+
+<img src="img/Adapter_Generic_A.jpg" height="150"/> <img src="img/Adapter_Generic_B.jpg" height="150"/>
+
 <a id="adapter-tc2050-430"></a>
 #### Adapter TC2050-430
 
-This is a generic adapter between [TC2050-IDC-430](https://www.tag-connect.com/product/tc2050-idc-430-legged-cable-for-use-with-msp430-fet430)
+This is an adapter between [TC2050-IDC-430](https://www.tag-connect.com/product/tc2050-idc-430-legged-cable-for-use-with-msp430-fet430)
 (14 pins) to [TC2050-IDC](https://www.tag-connect.com/product/tc2050-idc-tag-connect-2050-idc) (10 pins).
 
 <img src="img/Adapter_TC2050_430_A.jpg" height="150"/> <img src="img/Adapter_TC2050_430_B.jpg" height="150"/>
-<img src="img/Adapter_TC2050_430_C.png" height="150"/>
+
+<img src="img/Adapter_TC2050_430_C.svg" height="150"/>
 
 <a id="adapter-j-link"></a>
 #### Adapter J-Link
@@ -243,6 +270,8 @@ This is an adapter between J-Link (20 pins) to 10 pins (e.g. for TC2050-IDC).
 
 <img src="img/Adapter_J_LINK_A.jpg" height="150"/> <img src="img/Adapter_J_LINK_B.jpg" height="150"/>
 
+<img src="img/Adapter_J_LINK_C.svg" height="200"/>
+
 <a id="adapter-st-link"></a>
 #### Adapter ST-Link
 
@@ -250,17 +279,4 @@ This is an adapter between ST-Link (20 pins) to 10 pins (e.g. for TC2050-IDC).
 
 <img src="img/Adapter_ST_LINK_A.jpg" height="150"/> <img src="img/Adapter_ST_LINK_B.jpg" height="150"/>
 
-<a id="adapter-generic"></a>
-#### Adapter Generic
-
-This is a generic 10 pins adapter. Can be used for custom adapters (e.g. just use 6 pins).
-
-<img src="img/Adapter_Generic_A.jpg" height="150"/> <img src="img/Adapter_Generic_B.jpg" height="150"/>
-<img src="img/Adapter_Generic_C.jpg" height="150"/>
-
-<a id="cascaded-relay-boards"></a>
-### Cascaded relay boards
-
-Relay boards can also be cascaded:
-
-<img src="img/RB_1_10_00_cascaded.jpg" width="800"/>
+<img src="img/Adapter_ST_LINK_C.svg" height="200"/>
