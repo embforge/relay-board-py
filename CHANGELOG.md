@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3] - 2024-03-28
+### Added
+### Changed
+- Moved repository to github.com/embforge
+### Fixed
+### Docs
+
 ## [0.2] - 2024-03-05
 ### Added
 - Use logging module instead of print function
